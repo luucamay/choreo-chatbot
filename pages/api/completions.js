@@ -17,14 +17,16 @@ export default async function handler(req, res) {
 
   // making the assyn call here:
   try {
+    const userText = req.body.lastMessage ? req.body.lastMessage : 'hi';
+    const messages = [...req.body.messages, { role: 'user', content: userText }];
+    //const messages = [{ role: 'user', content: userText }];
     const completion = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
-      messages: [
-        { "role": "user", "content": req.body.message }],
+      messages: messages,
       max_tokens: 150
     })
-    console.log(completion.data.choices[0].message.content);
-    res.status(200).json({ result: completion.data.choices[0].message.content });
+    console.log(completion.data.choices[0].message);
+    res.status(200).json({ message: completion.data.choices[0].message });
   } catch (error) {
     // Consider adjusting the error handling logic for your use case
     if (error.response) {

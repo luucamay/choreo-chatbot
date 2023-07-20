@@ -2,20 +2,24 @@
 import Image from 'next/image'
 import styles from './page.module.css'
 import Head from 'next/head';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const [userInput, setUserInput] = useState("");
-  const [previusChats, setPreviusChats] = useState("");
+  const [aiMessage, setAiMessage] = useState(null);
+  const [previusChats, setPreviusChats] = useState([
+    { "role": "system", "content": `Take on the persona of Martha Graham for the rest of this conversation` }]);
 
   const getMessages = async () => {
+
+
     try {
       const response = await fetch("/api/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: userInput }),
+        body: JSON.stringify({ messages: previusChats, lastMessage: userInput }),
       });
 
       const data = await response.json();
@@ -23,10 +27,29 @@ export default function Home() {
         throw data.error || new Error(`Request failed with status ${response.status}`);
       }
       console.log(data)
+      setAiMessage(data.message);
     } catch (error) {
       console.error(error)
     }
   }
+
+  useEffect(() => {
+    setUserInput('');
+    if (userInput && aiMessage) {
+      setPreviusChats(previusChats => (
+        [...previusChats,
+        {
+          role: 'user',
+          content: userInput
+        },
+        {
+          role: aiMessage.role,
+          content: aiMessage.content
+        }]))
+    }
+    setUserInput('');
+
+  }, [aiMessage])
 
   return (
     <div className={styles.app}>
@@ -45,10 +68,15 @@ export default function Home() {
       <section className={styles.main}>
         <h1>LuGPT</h1>
         <ul className={styles.feed}>
+          {previusChats.map((chatMessage, index) =>
+            <li key={index} >
+              <p className={styles.role}>{chatMessage.role}</p>
+              <p>{chatMessage.content}</p>
+            </li>)}
         </ul>
         <div className={styles.bottomsection}>
           <div className={styles.inputcontainer}>
-            <input value={userInput} onChange={(e) => { setUserInput(e.target.value) }} />
+            <input value={userInput} onChange={(e) => { if (e.keyCode == 13) { getMessages() } else { setUserInput(e.target.value) } }} />
             <div id='submit' className={styles.submit} onClick={getMessages}> ➣ </div>
           </div>
           <p className={styles.info}>
